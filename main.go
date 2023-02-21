@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	gameEntryURL = "https://shinycolors.enza.fun/home"
+	gameEntryURL     = "https://shinycolors.enza.fun/home"
+	profileDirectory = "Default"
 
-	retryInterval = 250 * time.Millisecond
-	retryTimes    = 10
+	retryInterval = 100 * time.Millisecond
+	retryTimes    = 50
 	waitingTime   = 10 * time.Second
 )
 
@@ -37,6 +38,17 @@ func getPathOfMicrosoftEdge() (string, error) {
 	return filepath.Join(programFilesPath, "Microsoft/Edge/Application/msedge.exe"), nil
 }
 
+func getGameHWNDs() []win32.HWND {
+	gameHWNDs := make([]win32.HWND, 0)
+	win32.EnumWindows(func(hwnd win32.HWND) bool {
+		if title := hwnd.GetWindowText(); gameTitleRegexp.MatchString(title) {
+			gameHWNDs = append(gameHWNDs, hwnd)
+		}
+		return true
+	})
+	return gameHWNDs
+}
+
 func init() {
 	var err error
 
@@ -46,31 +58,31 @@ func init() {
 	}
 	commandToLaunchGame = exec.Command(
 		pathOfMicrosoftEdge,
-		"--profile-directory=Default",
+		"--profile-directory="+profileDirectory,
 		"--app="+gameEntryURL,
 	)
 }
 
 func main() {
 	var (
-		gameHWNDs = make([]win32.HWND, 0)
+		gameHWNDs []win32.HWND
 		err       error
 	)
-
+	if len(getGameHWNDs()) > 0 {
+		// panic("game is already running")
+		return
+	}
 	err = commandToLaunchGame.Start()
 	if err != nil {
 		panic(err)
 	}
 	for i := 0; i < retryTimes; i++ {
-		time.Sleep(retryInterval)
-		win32.EnumWindows(func(hwnd win32.HWND) bool {
-			if title := hwnd.GetWindowText(); gameTitleRegexp.MatchString(title) {
-				gameHWNDs = append(gameHWNDs, hwnd)
-			}
-			return true
-		})
+		gameHWNDs = getGameHWNDs()
 		if len(gameHWNDs) > 0 {
 			break
+		}
+		if i < retryTimes-1 {
+			time.Sleep(retryInterval)
 		}
 	}
 	if len(gameHWNDs) == 0 {
