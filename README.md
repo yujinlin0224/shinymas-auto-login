@@ -1,0 +1,1 @@
+# Shinymas auto sign in
