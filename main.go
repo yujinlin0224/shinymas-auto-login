@@ -1,7 +1,10 @@
 package main
 
 import (
+	"errors"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"time"
 
@@ -10,23 +13,51 @@ import (
 )
 
 const (
+	gameEntryURL = "https://shinycolors.enza.fun/home"
+
 	retryInterval = 250 * time.Millisecond
 	retryTimes    = 10
 	waitingTime   = 10 * time.Second
 )
 
+var (
+	gameTitleRegexp = regexp.MustCompile(`^アイドルマスター\s+シャイニーカラーズ$`)
+
+	commandToLaunchGame *exec.Cmd
+)
+
+func getPathOfMicrosoftEdge() (string, error) {
+	programFilesPath := os.Getenv("ProgramFiles(x86)")
+	if programFilesPath == "" {
+		programFilesPath = os.Getenv("ProgramFiles")
+	}
+	if programFilesPath == "" {
+		return "", errors.New("cannot find path of \"Program Files\" directory")
+	}
+	return filepath.Join(programFilesPath, "Microsoft/Edge/Application/msedge.exe"), nil
+}
+
+func init() {
+	var err error
+
+	pathOfMicrosoftEdge, err := getPathOfMicrosoftEdge()
+	if err != nil {
+		panic(err)
+	}
+	commandToLaunchGame = exec.Command(
+		pathOfMicrosoftEdge,
+		"--profile-directory=Default",
+		"--app="+gameEntryURL,
+	)
+}
+
 func main() {
 	var (
-		gameTitleRegexp = regexp.MustCompile(`^アイドルマスター\s+シャイニーカラーズ$`)
-		gameHWNDs       = make([]win32.HWND, 0)
-		err             error
+		gameHWNDs = make([]win32.HWND, 0)
+		err       error
 	)
 
-	err = exec.Command(
-		"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
-		"--profile-directory=Default",
-		"--app=https://shinycolors.enza.fun/home",
-	).Start()
+	err = commandToLaunchGame.Start()
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +74,7 @@ func main() {
 		}
 	}
 	if len(gameHWNDs) == 0 {
-		panic("Cannot find any game windows")
+		panic("cannot find any game windows")
 	}
 	for _, hwnd := range gameHWNDs {
 		hwnd.ShowWindow(win32Const.SW_HIDE)
