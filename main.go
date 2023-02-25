@@ -2,10 +2,12 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	win32 "github.com/rodrigocfd/windigo/win"
@@ -20,11 +22,6 @@ const (
 
 	gameEntryURL              = "https://shinycolors.enza.fun/home"
 	profileDirectoryOfBrowser = "Default"
-
-	retryInterval = 100 * time.Millisecond
-	retryTimes    = 50
-
-	waitingTimeForSigningGame = 10 * time.Second
 )
 
 var (
@@ -33,42 +30,38 @@ var (
 		os.Getenv("ProgramFiles(x86)"),
 		os.Getenv("LocalAppData"),
 	}
-	relativePathOfBrowsers = []string{
-		relativePathOfMicrosoftEdge,
-		relativePathOfGoogleChrome,
-		relativePathOfChromium,
-		relativePathOfBrave,
+	relativePathOfBrowsers = map[string]string{
+		"edge":     relativePathOfMicrosoftEdge,
+		"chrome":   relativePathOfGoogleChrome,
+		"chromium": relativePathOfChromium,
+		"brave":    relativePathOfBrave,
 	}
 
 	gameTitleRegexp = regexp.MustCompile(`^\s*アイドルマスター\s+シャイニーカラーズ\s*$`)
 
-	browserPath         string
-	commandToLaunchGame *exec.Cmd
+	browserName   string
+	retryInterval int
+	retryTimes    int
+	waitingTime   int
 )
 
-func setBrowserPath() error {
+func getBrowserPath() (string, error) {
 	var err error
 
 	for _, pathOfProgramDirectory := range pathOfProgramDirectories {
 		if pathOfProgramDirectory == "" {
 			continue
 		}
-		for _, relativePathOfBrowser := range relativePathOfBrowsers {
-			path := filepath.Join(pathOfProgramDirectory, relativePathOfBrowser)
-			if _, err = os.Stat(path); errors.Is(err, os.ErrNotExist) {
-				continue
-			} else if err != nil {
-				return err
-			} else {
-				browserPath = path
-				return nil
-			}
+		path := filepath.Join(pathOfProgramDirectory, relativePathOfBrowsers[browserName])
+		if _, err = os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			continue
+		} else if err != nil {
+			return "", err
+		} else {
+			return path, nil
 		}
 	}
-	if browserPath == "" {
-		return errors.New("cannot find browser")
-	}
-	return err
+	return "", errors.New("cannot find browser")
 }
 
 func getGameHWNDs() ([]win32.HWND, error) {
@@ -90,7 +83,7 @@ func getGameHWNDs() ([]win32.HWND, error) {
 			if err != nil {
 				return true
 			}
-			if processBaseName != filepath.Base(browserPath) {
+			if processBaseName != filepath.Base(relativePathOfBrowsers[browserName]) {
 				return true
 			}
 			gameHWNDs = append(gameHWNDs, hwnd)
@@ -107,20 +100,32 @@ func checkWindowVisible(hwnd win32.HWND) bool {
 }
 
 func init() {
-	if err := setBrowserPath(); err != nil {
-		panic(err)
-	}
-	commandToLaunchGame = exec.Command(
-		browserPath,
-		"--profile-directory="+profileDirectoryOfBrowser,
-		"--app="+gameEntryURL,
-	)
+	flag.StringVar(&browserName, "bn", "edge", "browser name, available values: edge, chrome, chromium, brave")
+	flag.IntVar(&retryInterval, "ri", 100, "retry interval in milliseconds")
+	flag.IntVar(&retryTimes, "rt", 100, "retry times")
+	flag.IntVar(&waitingTime, "wt", 20, "waiting time in seconds")
+
 }
 
 func main() {
 	var (
 		gameHWNDs []win32.HWND
 		err       error
+	)
+
+	flag.Parse()
+	browserName = strings.ToLower(strings.TrimSpace(browserName))
+	retryIntervalDuration := time.Duration(retryInterval) * time.Millisecond
+	waitingTimeDuration := time.Duration(waitingTime) * time.Second
+
+	browserPath, err := getBrowserPath()
+	if err != nil {
+		panic(err)
+	}
+	commandToLaunchGame := exec.Command(
+		browserPath,
+		"--profile-directory="+profileDirectoryOfBrowser,
+		"--app="+gameEntryURL,
 	)
 
 	// Make sure there is no game window opened
@@ -149,7 +154,7 @@ func main() {
 			}
 		}
 		if i < retryTimes-1 {
-			time.Sleep(retryInterval)
+			time.Sleep(retryIntervalDuration)
 		}
 	}
 
@@ -167,7 +172,7 @@ func main() {
 			break
 		}
 		if i < retryTimes-1 {
-			time.Sleep(retryInterval)
+			time.Sleep(retryIntervalDuration)
 		}
 	}
 	if len(gameHWNDs) == 0 {
@@ -181,7 +186,7 @@ func main() {
 		}
 		hwnd.ShowWindow(win32Const.SW_HIDE)
 	}
-	time.Sleep(waitingTimeForSigningGame)
+	time.Sleep(waitingTimeDuration)
 
 	// Close game window if it is still hidden
 	for _, hwnd := range gameHWNDs {

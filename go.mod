@@ -1,4 +1,4 @@
-module github.com/yujinlin0224/shinymas-auto-sign-in
+module github.com/yujinlin0224/shinymas-auto-login
 
 go 1.20
 
