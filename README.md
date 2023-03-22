@@ -26,7 +26,7 @@ Automatically log in to the web game “THE iDOLM@STER SHINY COLORS” to receiv
   - `-tn`: Specify the task name. Default value is `ShinymasAutoLogin`.
   - `-ri`: Specify the repetition interval. Default value is `00:02:00`.
   - `-rd`: Specify the repetition duration. Default value is `00:10:00`.
-  - `tt`: Specify the trigger time in +09:00 time zone. Default value is `05:00:00`.
-  - `td`: Specify the trigger random delay. Default value is `00:00:05`.
+  - `-tt`: Specify the trigger time in +09:00 time zone. Default value is `05:00:00`.
+  - `-td`: Specify the trigger random delay. Default value is `00:00:05`.
   - `-pp`: Specify the program path. Default value is `$env:LOCALAPPDATA\ShinymasAutoLogin\ShinymasAutoLogin.exe`.
   - `-pa`: Specify the program arguments. Default value is `-bn edge -ri 100 -rt 100 -wt 20`.
