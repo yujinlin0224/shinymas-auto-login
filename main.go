@@ -15,10 +15,11 @@ import (
 )
 
 const (
-	relativePathOfMicrosoftEdge = "Microsoft/Edge/Application/msedge.exe"
-	relativePathOfGoogleChrome  = "Google/Chrome/Application/chrome.exe"
-	relativePathOfChromium      = "Chromium/Application/chrome.exe"
-	relativePathOfBrave         = "BraveSoftware/Brave-Browser/Application/brave.exe"
+	relativePathOfMicrosoftEdge     = "Microsoft/Edge/Application/msedge.exe"
+	relativePathOfMicrosoftEdgeIFEO = "Microsoft/Edge/Application/msedge_IFEO.exe"
+	relativePathOfGoogleChrome      = "Google/Chrome/Application/chrome.exe"
+	relativePathOfChromium          = "Chromium/Application/chrome.exe"
+	relativePathOfBrave             = "BraveSoftware/Brave-Browser/Application/brave.exe"
 
 	gameEntryURL              = "https://shinycolors.enza.fun/home"
 	profileDirectoryOfBrowser = "Default"
@@ -31,10 +32,11 @@ var (
 		os.Getenv("LocalAppData"),
 	}
 	relativePathOfBrowsers = map[string]string{
-		"edge":     relativePathOfMicrosoftEdge,
-		"chrome":   relativePathOfGoogleChrome,
-		"chromium": relativePathOfChromium,
-		"brave":    relativePathOfBrave,
+		"edge":      relativePathOfMicrosoftEdge,
+		"edge-ifeo": relativePathOfMicrosoftEdgeIFEO,
+		"chrome":    relativePathOfGoogleChrome,
+		"chromium":  relativePathOfChromium,
+		"brave":     relativePathOfBrave,
 	}
 
 	gameTitleRegexp = regexp.MustCompile(`^\s*アイドルマスター\s+シャイニーカラーズ\s*$`)
@@ -100,7 +102,7 @@ func checkWindowVisible(hwnd win32.HWND) bool {
 }
 
 func init() {
-	flag.StringVar(&browserName, "bn", "edge", "browser name, available values: edge, chrome, chromium, brave")
+	flag.StringVar(&browserName, "bn", "edge", "browser name, available values: edge, edge-ifeo, chrome, chromium, brave")
 	flag.IntVar(&retryInterval, "ri", 100, "retry interval in milliseconds")
 	flag.IntVar(&retryTimes, "rt", 100, "retry times")
 	flag.IntVar(&waitingTime, "wt", 20, "waiting time in seconds")
